@@ -24,6 +24,16 @@ def save_config(cfg):
 
 cfg = load_config()
 
+# Carrega chave de secrets do Streamlit, config local ou env
+secret_key = ""
+try:
+    if "GEMINI_API_KEY" in st.secrets:
+        secret_key = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    pass
+
+initial_key = secret_key or cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+
 st.set_page_config(
     page_title="AdCompliance Inspector | YouTube Ads & Demand Gen",
     page_icon="⚡",
@@ -31,7 +41,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS para UX moderna e responsividade mobile
 st.markdown("""
 <style>
     .main-title {
@@ -96,22 +105,21 @@ with st.sidebar:
     st.title("Configurações")
     
     local_ip = get_local_ip()
-    st.info(f"📱 **Acesso no Celular (Mesmo Wi-Fi):**\nhttp://{local_ip}:8501")
+    st.info(f"📱 **Acesso no Celular (Rede Local):**\nhttp://{local_ip}:8501")
     
-    saved_key = cfg.get("gemini_api_key", os.environ.get("GEMINI_API_KEY", ""))
     api_key_input = st.text_input(
         "Chave Gemini API (AI Studio)",
         type="password",
-        value=saved_key,
+        value=initial_key,
         help="Obtenha gratuitamente em https://aistudio.google.com"
     )
-    if api_key_input and api_key_input != saved_key:
+    if api_key_input and api_key_input != initial_key:
         cfg["gemini_api_key"] = api_key_input
         save_config(cfg)
         os.environ["GEMINI_API_KEY"] = api_key_input
         st.success("Chave salva com sucesso!")
-    elif saved_key:
-        os.environ["GEMINI_API_KEY"] = saved_key
+    elif initial_key:
+        os.environ["GEMINI_API_KEY"] = initial_key
 
     st.markdown("---")
     st.markdown("### 🎯 Padrão de Auditoria")
@@ -213,7 +221,7 @@ if should_analyze and target_path and os.path.exists(target_path):
                             <span style="font-weight: bold; font-size: 1.1rem;">⏱️ [{p.get('timestamp_inicio')} - {p.get('timestamp_fim')}] • {p.get('tipo')}</span>
                             <span style="font-weight: bold;">{sev_badge}</span>
                         </div>
-                        <p><strong>🚨 Trecho Identificado:</strong> <em>"{p.get('trecho_identificado')}"</em></p>
+                        <p><strong>🚨 Trecho Identificado:</strong> <em>\"{p.get('trecho_identificado')}\"</em></p>
                         <p><strong>📜 Política Google Ads Violada:</strong> {p.get('politica_violada')}</p>
                         <p><strong>🤖 Como o Robô do Google Age:</strong> {p.get('mecanismo_algoritmico')}</p>
                         <div style="background-color: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745; padding: 0.7rem; border-radius: 4px; margin-top: 0.5rem;">
