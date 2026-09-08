@@ -24,7 +24,6 @@ def save_config(cfg):
 
 cfg = load_config()
 
-# Carrega chave de secrets do Streamlit, config local ou env
 secret_key = ""
 try:
     if "GEMINI_API_KEY" in st.secrets:
@@ -95,6 +94,13 @@ st.markdown("""
         margin-bottom: 1rem;
         border-left: 5px solid #FF4B4B;
         background-color: rgba(255, 255, 255, 0.03);
+    }
+    .action-plan-box {
+        background-color: rgba(40, 167, 69, 0.08);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        border-radius: 10px;
+        padding: 1.2rem;
+        margin-bottom: 1.5rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -205,11 +211,52 @@ if should_analyze and target_path and os.path.exists(target_path):
             st.markdown("### 📋 Diagnóstico Executivo do Perito")
             st.write(results.get("diagnostico_executivo", "Auditoria finalizada."))
             
+            # NOVO BLOCO: PLANO CIRÚRGICO DE RE-APROVAÇÃO
+            plano = results.get("plano_reaprovacao", {})
+            st.markdown("---")
+            st.markdown("## 🎯 O QUE MUDAR EXATAMENTE NO VÍDEO PARA APROVAÇÃO")
+            
+            with st.container():
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### ✂️ Cortes Obrigatórios de Edição")
+                    cortes = plano.get("cortes_necessarios", [])
+                    if cortes:
+                        for c in cortes:
+                            st.error(f"❌ {c}")
+                    else:
+                        st.success("Nenhum corte direto de trecho obrigatório.")
+                        
+                    st.markdown("#### 👁️ Ajustes de Elementos Visuais")
+                    visuais = plano.get("alteracoes_visuais", [])
+                    if visuais:
+                        for v in visuais:
+                            st.warning(f"⚠️ {v}")
+                    else:
+                        st.info("Visual limpo de acordo com as diretrizes.")
+
+                with col2:
+                    st.markdown("#### 🎙️ Ajustes de Locução & Legenda (Antes ➔ Depois)")
+                    locucoes = plano.get("alteracoes_locucao_roteiro", [])
+                    if locucoes:
+                        for loc in locucoes:
+                            st.markdown(f"🔄 **{loc}**")
+                    else:
+                        st.success("Locução dentro dos padrões.")
+
+                    st.markdown("#### ⚖️ Disclaimer Obrigatório no Rodapé")
+                    disclaimer = plano.get("disclaimer_obrigatorio", "")
+                    if disclaimer:
+                        st.code(disclaimer, language="markdown")
+                    else:
+                        st.caption("Nenhum disclaimer adicional obrigatório.")
+
+            # DETALHAMENTO SEGUNDO A SEGUNDO
             problemas = results.get("problemas", [])
-            st.markdown(f"### 🔍 Problemas Encontrados Segundo a Segundo ({len(problemas)})")
+            st.markdown(f"### 🔍 Detalhamento Segundo a Segundo ({len(problemas)})")
             
             if not problemas:
-                st.success("Nenhum problema grave detectado! O criativo está em conformidade com as diretrizes do Google Ads / YouTube Ads.")
+                st.success("Nenhum problema detectado! O criativo está em conformidade total com o YouTube Ads.")
             else:
                 for idx, p in enumerate(problemas, 1):
                     sev = p.get("severidade", "MEDIO")
@@ -221,27 +268,37 @@ if should_analyze and target_path and os.path.exists(target_path):
                             <span style="font-weight: bold; font-size: 1.1rem;">⏱️ [{p.get('timestamp_inicio')} - {p.get('timestamp_fim')}] • {p.get('tipo')}</span>
                             <span style="font-weight: bold;">{sev_badge}</span>
                         </div>
-                        <p><strong>🚨 Trecho Identificado:</strong> <em>\"{p.get('trecho_identificado')}\"</em></p>
+                        <p><strong>🚨 O que o robô pegou:</strong> <em>\"{p.get('trecho_identificado')}\"</em></p>
                         <p><strong>📜 Política Google Ads Violada:</strong> {p.get('politica_violada')}</p>
-                        <p><strong>🤖 Como o Robô do Google Age:</strong> {p.get('mecanismo_algoritmico')}</p>
-                        <div style="background-color: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745; padding: 0.7rem; border-radius: 4px; margin-top: 0.5rem;">
-                            <strong>✂️ Instrução Exata para o Editor:</strong><br>{p.get('instrucao_edicao')}
+                        <p><strong>🤖 Como o Algoritmo Age:</strong> {p.get('mecanismo_algoritmico')}</p>
+                        <div style="background-color: rgba(40, 167, 69, 0.12); border-left: 3px solid #28a745; padding: 0.8rem; border-radius: 4px; margin-top: 0.5rem;">
+                            <strong>✅ O QUE MUDAR EXATAMENTE:</strong><br>{p.get('oque_mudar_exatamente', p.get('instrucao_edicao'))}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
             
+            # SEÇÃO DE EXPORTAÇÃO PARA O WHATSAPP DO EDITOR
             st.markdown("---")
-            st.markdown("### ✂️ Comanda Pronta para o Editor de Vídeo")
-            instrucoes = results.get("instrucoes_gerais_editor", [])
-            roteiro_ajustado = results.get("roteiro_ajustado_sugestao", "")
+            st.markdown("### 📲 Comanda Pronta para o WhatsApp do Editor")
+            comanda_whats = results.get("comanda_whatsapp_editor", "")
+            if not comanda_whats:
+                comanda_whats = "COMANDAS DE CORREÇÃO PARA O EDITOR (COMPLIANCE GOOGLE ADS):\n\n"
+                for i, c in enumerate(cortes, 1):
+                    comanda_whats += f"- Corte {i}: {c}\n"
+                for i, loc in enumerate(locucoes, 1):
+                    comanda_whats += f"- Ajuste de fala {i}: {loc}\n"
+                for i, vis in enumerate(visuais, 1):
+                    comanda_whats += f"- Ajuste visual {i}: {vis}\n"
+                if disclaimer:
+                    comanda_whats += f"\nInserir no rodapé: {disclaimer}\n"
+                    
+            st.text_area("Copie e cole direto no WhatsApp do seu editor de vídeo:", value=comanda_whats, height=180)
             
-            copia_texto = "COMANDAS DE CORREÇÃO PARA O EDITOR (COMPLIANCE GOOGLE ADS / YOUTUBE ADS):\n\n"
-            for i, inst in enumerate(instrucoes, 1):
-                copia_texto += f"{i}. {inst}\n"
-            if roteiro_ajustado:
-                copia_texto += f"\nROTEIRO/LOCUÇÃO ALTERNATIVA SUGERIDA:\n{roteiro_ajustado}\n"
-                
-            st.text_area("Copie e envie no WhatsApp/Slack para seu editor:", value=copia_texto, height=180)
+            # ROTEIRO CORRIGIDO COMPLETO
+            roteiro_full = results.get("roteiro_completo_corrigido", "")
+            if roteiro_full:
+                with st.expander("📄 Ver Roteiro Completo Já Corrigido e Adaptado"):
+                    st.write(roteiro_full)
             
         except Exception as e:
             st.error(f"Erro ao processar auditoria com a IA: {e}")
